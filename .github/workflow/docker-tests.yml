@@ -1,0 +1,45 @@
+name: Docker Tests - FakerGenerTest
+
+on:
+  workflow_dispatch:  # Ручной запуск из интерфейса GitHub
+  push:
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.github/workflows/docker-tests.yml'
+      - 'src/test/java/**/FakerGenerTest.java'  # Только при изменении ЭТОГО теста
+      - 'pom.xml'  # Если меняются зависимости теста
+
+jobs:
+  docker-fakertest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image for FakerGenerTest
+        run: |
+          docker build -t faker-generator-test .
+          echo "✅ Образ собран. Размеры образов:"
+          docker images | grep -E "faker-generator-test|playwright"
+
+      - name: Run FakerGenerTest in Docker container
+        run: |
+          docker run --rm \
+            --shm-size=2g \
+            --name faker-test-runner \
+            faker-generator-test
+
+      - name: Upload test report if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: faker-test-failure-report
+          path: target/surefire-reports/FakerGenerTest.txt
+          retention-days: 30
+
+      - name: Success notification
+        if: success()
+        run: |
+          echo "✅ Тест FakerGenerTest успешно выполнен в Docker контейнере!"

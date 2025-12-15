@@ -1,0 +1,7 @@
+services:
+  playwright-tests:
+    build: .
+    shm_size: '2gb'
+    volumes:
+      - ./target:/app/target
+    command: mvn test -Dtest=FakerGenerTest
